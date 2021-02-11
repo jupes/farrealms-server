@@ -16,5 +16,8 @@
   "bugs": {
     "url": "https://github.com/jupes/farrealms-server/issues"
   },
-  "homepage": "https://github.com/jupes/farrealms-server#readme"
+  "homepage": "https://github.com/jupes/farrealms-server#readme",
+  "dependencies": {
+    "yarn": "^1.22.10"
+  }
 }
