@@ -10,7 +10,9 @@ const main = async () => {
   await orm.em.persistAndFlush(post);
   //await orm.em.nativeInsert(Post, {'my first post 2'})
 
-  console.log('hello world');
+    // this will let me see what posts are in the database later
+//   const posts = await orm.em.find(Post, {});
+//   console.log(posts);
 };
 
 main().catch((err) => {
