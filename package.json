@@ -28,6 +28,7 @@
     "@mikro-orm/migrations": "^4.4.4",
     "@mikro-orm/postgresql": "^4.4.4",
     "apollo-server-express": "^2.21.2",
+    "argon2": "^0.27.1",
     "esnext": "^3.3.1",
     "express": "^4.17.1",
     "graphql": "^15.5.0",
