@@ -1,5 +1,6 @@
 import { User } from '../entities/User';
 import { MyContext } from 'src/types';
+import { __passwordRegex__ } from '../constants';
 import {
   Arg,
   Ctx,
@@ -44,14 +45,49 @@ export class UserResolver {
   async register(
     @Arg('options', () => UsernamePasswordInput) options: UsernamePasswordInput,
     @Ctx() { em }: MyContext
-  ): Promise<User> {
+  ): Promise<UserResponse> {
+    if (options.username.length < 4) {
+      return {
+        errors: [
+          {
+            field: 'username',
+            message: 'Username must be longer than 3 characters',
+          },
+        ],
+      };
+    }
+    if (!__passwordRegex__.test(options.password)) {
+      return {
+        errors: [
+          {
+            field: 'password',
+            message: 'Password does not match strength criteria',
+          },
+        ],
+      };
+    }
+
     const hashedPassword = await argon2.hash(options.password);
     const user = em.create(User, {
       username: options.username,
       password: hashedPassword,
     });
-    await em.persistAndFlush(user);
-    return user;
+    try {
+      await em.persistAndFlush(user);
+    } catch (err) {
+      if (err.code === '23505') {
+        return {
+          errors: [
+            {
+              field: 'username',
+              message: 'Username has already been taken',
+            },
+          ],
+        };
+      }
+    }
+
+    return { user };
   }
 
   @Mutation(() => UserResponse)
