@@ -1,7 +1,7 @@
 {
   "name": "farrealms-server",
   "version": "1.0.0",
-  "description": "not reddit",
+  "description": "Server side of the Not Reddit app",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
@@ -16,7 +16,7 @@
     "url": "git+https://github.com/jupes/farrealms-server.git"
   },
   "keywords": [],
-  "author": "",
+  "author": "Erich Staehling @Jupes",
   "license": "ISC",
   "bugs": {
     "url": "https://github.com/jupes/farrealms-server/issues"
