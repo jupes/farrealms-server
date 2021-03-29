@@ -41,6 +41,23 @@ class FieldError {
 
 @Resolver()
 export class UserResolver {
+  @Query(() => User, { nullable: true })
+  async currentUser(@Ctx() { req, em }: MyContext) {
+    // user is not logged in
+    if (!req.session.userId) {
+      return null;
+    }
+
+    const user = await em.findOne(User, { _id: req.session.userId });
+    return user;
+  }
+
+  // get all the users currently registered
+  @Query(() => [User])
+  async users(@Ctx() { em }: MyContext): Promise<User[]> {
+    return await em.find(User, {});
+  }
+
   @Mutation(() => User)
   async register(
     @Arg('options', () => UsernamePasswordInput) options: UsernamePasswordInput,
@@ -122,10 +139,5 @@ export class UserResolver {
     req.session.userId = user._id;
 
     return { user };
-  }
-
-  @Query(() => [User])
-  users(@Ctx() { em }: MyContext): Promise<User[]> {
-    return em.find(User, {});
   }
 }
