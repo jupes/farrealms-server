@@ -85,6 +85,17 @@ export class UserResolver {
     //   };
     // }
 
+    if (options.password.length < 5) {
+      return {
+        errors: [
+          {
+            field: 'password',
+            message: 'Password must be of length 5 or greater',
+          },
+        ],
+      };
+    }
+
     const hashedPassword = await argon2.hash(options.password);
     const user = em.create(User, {
       username: options.username,
