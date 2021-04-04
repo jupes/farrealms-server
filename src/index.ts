@@ -12,6 +12,7 @@ import redis from 'redis';
 import session from 'express-session';
 import connectRedis from 'connect-redis';
 import { MyContext } from './types';
+import cors from 'cors';
 
 const main = async () => {
   const orm = await MikroORM.init(mikroConfig);
@@ -21,6 +22,13 @@ const main = async () => {
 
   const RedisStore = connectRedis(session);
   const redisClient = redis.createClient();
+
+  app.use(
+    cors({
+      origin: 'http://localhost:3000',
+      credentials: true,
+    })
+  );
   // the order you add express middleware is the order that they will run
   app.use(
     session({
@@ -49,23 +57,14 @@ const main = async () => {
     context: ({ req, res }): MyContext => ({ em: orm.em, req, res }),
   });
 
-  apolloServer.applyMiddleware({ app });
+  apolloServer.applyMiddleware({
+    app,
+    cors: false,
+  });
 
   app.listen(4000, () => {
     console.log('server started on localhost:4000');
   });
-
-  // underscore placed at the request param as best practice
-  //   app.get('/', (_, res) => {
-  //     res.send(posts);
-  //   });
-
-  //   const post = orm.em.create(Post, { title: 'my first post' });
-  //   await orm.em.persistAndFlush(post);
-
-  // this will let me see what posts are in the database later
-  //   const posts = await orm.em.find(Post, {});
-  //   console.log(posts);
 };
 
 main().catch((err) => {
