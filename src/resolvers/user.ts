@@ -1,6 +1,6 @@
 import { User } from '../entities/User';
 import { MyContext } from 'src/types';
-import { __passwordRegex__ } from '../constants';
+import { COOKIE_NAME, __passwordRegex__ } from '../constants';
 import {
   Arg,
   Ctx,
@@ -117,9 +117,9 @@ export class UserResolver {
 
     // sign in the user right after they register
     req.session.userId = user._id;
-    console.log('THE USER RETURNED')
+    console.log('THE USER RETURNED');
     console.log(user);
-    
+
     return { user };
   }
 
@@ -155,5 +155,22 @@ export class UserResolver {
     req.session.userId = user._id;
 
     return { user };
+  }
+
+  @Mutation(() => Boolean)
+  async logout(@Ctx() { req, res }: MyContext) {
+    return new Promise((resolve) =>
+      req.session.destroy((err) => {
+        // clear the cookie weather the session was destroyed or not
+        res.clearCookie(COOKIE_NAME);
+        if (err) {
+          console.log('An error occured in the logout mutation');
+          console.error(err);
+          resolve(false);
+          return;
+        }
+        resolve(true);
+      })
+    );
   }
 }
