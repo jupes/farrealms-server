@@ -8,20 +8,23 @@ import { buildSchema } from 'type-graphql';
 import { HelloResolver } from './resolvers/hello';
 import { PostResolver } from './resolvers/post';
 import { UserResolver } from './resolvers/user';
-import redis from 'redis';
+import Redis from 'ioredis';
 import session from 'express-session';
 import connectRedis from 'connect-redis';
 import { MyContext } from './types';
 import cors from 'cors';
+// import { User } from './entities/User';
 
 const main = async () => {
   const orm = await MikroORM.init(mikroConfig);
+  // FOR TEST PURPOSES: Delete all users
+  // await orm.em.nativeDelete(User, {})
   await orm.getMigrator().up();
 
   const app = express();
 
   const RedisStore = connectRedis(session);
-  const redisClient = redis.createClient();
+  const redis = new Redis();
 
   app.use(
     cors({
@@ -34,7 +37,7 @@ const main = async () => {
     session({
       name: COOKIE_NAME ,
       store: new RedisStore({
-        client: redisClient,
+        client: redis,
         disableTouch: true, // this keeps sessions alive forever
       }),
       cookie: {
@@ -54,7 +57,7 @@ const main = async () => {
       resolvers: [HelloResolver, PostResolver, UserResolver],
       validate: false,
     }),
-    context: ({ req, res }): MyContext => ({ em: orm.em, req, res }),
+    context: ({ req, res }): MyContext => ({ em: orm.em, req, res, redis }),
   });
 
   apolloServer.applyMiddleware({
