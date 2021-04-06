@@ -1,6 +1,7 @@
 // the NODE_ENV is a special variable that is set to the string production in a production environment
 export const __prod__ = process.env.NODE_ENV === 'production';
 export const COOKIE_NAME = 'realmsid';
+export const FORGOT_PASSWORD_PREFIX = 'forgot-password:';
 
 /* Regex for ensuring password meets the following requirements: 
     8 to 30 characters length

@@ -1,6 +1,10 @@
 import { User } from '../entities/User';
 import { MyContext } from 'src/types';
-import { COOKIE_NAME, __passwordRegex__ } from '../constants';
+import {
+  COOKIE_NAME,
+  FORGOT_PASSWORD_PREFIX,
+  __passwordRegex__,
+} from '../constants';
 import {
   Arg,
   Ctx,
@@ -13,7 +17,9 @@ import {
 import argon2 from 'argon2';
 import { EntityManager } from '@mikro-orm/postgresql';
 import { UsernamePasswordInput } from './UsernamePasswordInput';
-import { validateRegister } from '../utils/validateRegister'; 
+import { validateRegister } from '../utils/validateRegister';
+import { sendEmail } from '../utils/sendEmail';
+import { v4 } from 'uuid';
 
 // Object types are what we return
 @ObjectType()
@@ -52,9 +58,30 @@ export class UserResolver {
   }
 
   @Mutation(() => Boolean)
-  async forgotPassword(@Arg('email') email: string, @Ctx() { em }: MyContext) {
-    //  const user =  await em.findOne(User, {email})
+  async forgotPassword(
+    @Arg('email') email: string,
+    @Ctx() { em, redis }: MyContext
+  ) {
+    const user = await em.findOne(User, { email });
+    if (!user) {
+      // the user is not in the DB, but we dont necessarily want the user to know that so return true and do nothing
+      return true;
+    }
 
+    // v4 function uses uuid to create a unique token
+    const token = v4();
+
+    await redis.set(
+      FORGOT_PASSWORD_PREFIX + token,
+      user._id,
+      'ex',
+      1000 * 60 * 60 * 24 // one day to use
+    );
+    // TODO: Create better email template
+    await sendEmail(
+      email,
+      `<a href="http://localhost:3000/reset-password/${token}">reset password</a>`
+    );
     return true;
   }
 
