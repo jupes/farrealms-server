@@ -1,6 +1,6 @@
 import { User } from '../entities/User';
 import { MyContext } from 'src/types';
-import { __passwordRegex__ } from '../constants';
+import { COOKIE_NAME, __passwordRegex__ } from '../constants';
 import {
   Arg,
   Ctx,
@@ -12,6 +12,7 @@ import {
   Resolver,
 } from 'type-graphql';
 import argon2 from 'argon2';
+import { EntityManager } from '@mikro-orm/postgresql';
 
 // Input types are used for arguments
 @InputType()
@@ -63,36 +64,45 @@ export class UserResolver {
     @Arg('options', () => UsernamePasswordInput) options: UsernamePasswordInput,
     @Ctx() { em, req }: MyContext
   ): Promise<UserResponse> {
-    if (options.username.length < 4) {
+    if (options.username.length < 3) {
       return {
         errors: [
           {
             field: 'username',
-            message: 'Username must be longer than 3 characters',
+            message: 'Username must be longer than 2 characters',
           },
         ],
       };
     }
-    // Commented out because it is annoying for testing, and I dont know if I wrote it right
-    // if (!__passwordRegex__.test(options.password)) {
-    //   return {
-    //     errors: [
-    //       {
-    //         field: 'password',
-    //         message: 'Password does not match strength criteria',
-    //       },
-    //     ],
-    //   };
-    // }
+
+    if (options.password.length < 3) {
+      return {
+        errors: [
+          {
+            field: 'password',
+            message: 'Password must be of length 3 or greater',
+          },
+        ],
+      };
+    }
 
     const hashedPassword = await argon2.hash(options.password);
-    const user = em.create(User, {
-      username: options.username,
-      password: hashedPassword,
-    });
+    let user;
     try {
-      await em.persistAndFlush(user);
+      const result = await (em as EntityManager)
+        .createQueryBuilder(User)
+        .getKnexQuery()
+        .insert({
+          username: options.username,
+          password: hashedPassword,
+          created_at: new Date(),
+          updated_at: new Date(),
+        })
+        .returning('*');
+      user = result[0];
     } catch (err) {
+      //err.code === '23505'
+      //err.detail.includes('already exists')
       if (err.code === '23505') {
         return {
           errors: [
@@ -107,6 +117,8 @@ export class UserResolver {
 
     // sign in the user right after they register
     req.session.userId = user._id;
+    console.log('THE USER RETURNED');
+    console.log(user);
 
     return { user };
   }
@@ -143,5 +155,22 @@ export class UserResolver {
     req.session.userId = user._id;
 
     return { user };
+  }
+
+  @Mutation(() => Boolean)
+  async logout(@Ctx() { req, res }: MyContext) {
+    return new Promise((resolve) =>
+      req.session.destroy((err) => {
+        // clear the cookie weather the session was destroyed or not
+        res.clearCookie(COOKIE_NAME);
+        if (err) {
+          console.log('An error occured in the logout mutation');
+          console.error(err);
+          resolve(false);
+          return;
+        }
+        resolve(true);
+      })
+    );
   }
 }
