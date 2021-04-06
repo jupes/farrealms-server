@@ -12,6 +12,7 @@ import {
   Resolver,
 } from 'type-graphql';
 import argon2 from 'argon2';
+import { EntityManager } from '@mikro-orm/postgresql';
 
 // Input types are used for arguments
 @InputType()
@@ -63,47 +64,45 @@ export class UserResolver {
     @Arg('options', () => UsernamePasswordInput) options: UsernamePasswordInput,
     @Ctx() { em, req }: MyContext
   ): Promise<UserResponse> {
-    if (options.username.length < 4) {
+    if (options.username.length < 3) {
       return {
         errors: [
           {
             field: 'username',
-            message: 'Username must be longer than 3 characters',
+            message: 'Username must be longer than 2 characters',
           },
         ],
       };
     }
-    // Commented out because it is annoying for testing, and I dont know if I wrote it right
-    // if (!__passwordRegex__.test(options.password)) {
-    //   return {
-    //     errors: [
-    //       {
-    //         field: 'password',
-    //         message: 'Password does not match strength criteria',
-    //       },
-    //     ],
-    //   };
-    // }
 
-    if (options.password.length < 5) {
+    if (options.password.length < 3) {
       return {
         errors: [
           {
             field: 'password',
-            message: 'Password must be of length 5 or greater',
+            message: 'Password must be of length 3 or greater',
           },
         ],
       };
     }
 
     const hashedPassword = await argon2.hash(options.password);
-    const user = em.create(User, {
-      username: options.username,
-      password: hashedPassword,
-    });
+    let user;
     try {
-      await em.persistAndFlush(user);
+      const result = await (em as EntityManager)
+        .createQueryBuilder(User)
+        .getKnexQuery()
+        .insert({
+          username: options.username,
+          password: hashedPassword,
+          created_at: new Date(),
+          updated_at: new Date(),
+        })
+        .returning('*');
+      user = result[0];
     } catch (err) {
+      //err.code === '23505'
+      //err.detail.includes('already exists')
       if (err.code === '23505') {
         return {
           errors: [
@@ -118,7 +117,9 @@ export class UserResolver {
 
     // sign in the user right after they register
     req.session.userId = user._id;
-
+    console.log('THE USER RETURNED')
+    console.log(user);
+    
     return { user };
   }
 
