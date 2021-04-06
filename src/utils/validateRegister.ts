@@ -6,8 +6,8 @@ import { UsernamePasswordInput } from 'src/resolvers/UsernamePasswordInput';
  * @returns An error array, it is put to register what it does with the error
  */
 
+// TODO: have separate utils devoted to separate fields, then larger utils like this one dedicated to specific mutations
 export const validateRegister = (options: UsernamePasswordInput) => {
-
   if (options.username.length < 3) {
     return [
       {
@@ -35,7 +35,7 @@ export const validateRegister = (options: UsernamePasswordInput) => {
       },
     ];
   }
-  
+
   if (options.password.length < 3) {
     return [
       {

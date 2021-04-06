@@ -57,6 +57,60 @@ export class UserResolver {
     return await em.find(User, {});
   }
 
+  @Mutation(() => UserResponse)
+  async resetPassword(
+    @Arg('token') token: string,
+    @Arg('newPassword') newPassword: string,
+    @Ctx() { em, redis, req }: MyContext
+  ): Promise<UserResponse> {
+    // Verify the new password is good
+    // TODO: enforce password requirements here, prolly handled by a util later instead of here
+    if (newPassword.length < 3) {
+      return {
+        errors: [
+          {
+            field: 'newPassword',
+            message: 'Password must be of length 3 or greater',
+          },
+        ],
+      };
+    }
+const key = FORGOT_PASSWORD_PREFIX + token;
+    const userId = await redis.get(key);
+    if (!userId) {
+      return {
+        errors: [
+          {
+            field: 'token',
+            message: 'Token expired',
+          },
+        ],
+      };
+    }
+
+    const user = await em.findOne(User, { _id: parseInt(userId) });
+    if (!user) {
+      return {
+        errors: [
+          {
+            field: 'token',
+            message: 'User no longer exists',
+          },
+        ],
+      };
+    }
+
+    user.password = await argon2.hash(newPassword);
+    await em.persistAndFlush(user);
+
+    await redis.del(key)
+
+    // Log in user automatically after successful password reset
+    req.session.userId = user._id;
+
+    return { user };
+  }
+
   @Mutation(() => Boolean)
   async forgotPassword(
     @Arg('email') email: string,
