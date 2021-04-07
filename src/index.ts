@@ -1,19 +1,19 @@
-import 'reflect-metadata';
-import { COOKIE_NAME, __prod__ } from './constants';
-import express from 'express';
 import { ApolloServer } from 'apollo-server-express';
+import connectRedis from 'connect-redis';
+import cors from 'cors';
+import express from 'express';
+import session from 'express-session';
+import Redis from 'ioredis';
+import 'reflect-metadata';
 import { buildSchema } from 'type-graphql';
+import { createConnection } from 'typeorm';
+import { COOKIE_NAME, __prod__ } from './constants';
+import { Post } from './entities/Post';
+import { User } from './entities/User';
 import { HelloResolver } from './resolvers/hello';
 import { PostResolver } from './resolvers/post';
 import { UserResolver } from './resolvers/user';
-import Redis from 'ioredis';
-import session from 'express-session';
-import connectRedis from 'connect-redis';
 import { MyContext } from './types';
-import cors from 'cors';
-import { createConnection } from "typeorm";
-import { Post } from './entities/Post';
-import { User } from './entities/User';
 import { sleep } from './utils/sleep';
 
 const main = async () => {
@@ -24,7 +24,7 @@ const main = async () => {
     password: 'postgres',
     logging: true,
     synchronize: true,
-    entities: [Post, User]
+    entities: [Post, User],
   });
 
   // const orm = await MikroORM.init(mikroConfig);
@@ -46,7 +46,7 @@ const main = async () => {
   // the order you add express middleware is the order that they will run
   app.use(
     session({
-      name: COOKIE_NAME ,
+      name: COOKIE_NAME,
       store: new RedisStore({
         client: redis,
         disableTouch: true, // this keeps sessions alive forever
@@ -78,7 +78,7 @@ const main = async () => {
 
   app.listen(4000, () => {
     // The log was showing up above where I wanted it to so I splept it so it showed up later
-    sleep( 1000, () => console.log('server started on localhost:4000'));
+    sleep(1000, () => console.log('server started on localhost:4000'));
   });
 };
 

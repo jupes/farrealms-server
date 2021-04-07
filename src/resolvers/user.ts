@@ -1,10 +1,5 @@
-import { User } from '../entities/User';
+import argon2 from 'argon2';
 import { MyContext } from 'src/types';
-import {
-  COOKIE_NAME,
-  FORGOT_PASSWORD_PREFIX,
-  __passwordRegex__,
-} from '../constants';
 import {
   Arg,
   Ctx,
@@ -14,12 +9,13 @@ import {
   Query,
   Resolver,
 } from 'type-graphql';
-import argon2 from 'argon2';
-import { UsernamePasswordInput } from './UsernamePasswordInput';
-import { validateRegister } from '../utils/validateRegister';
-import { sendEmail } from '../utils/sendEmail';
-import { v4 } from 'uuid';
 import { getConnection } from 'typeorm';
+import { v4 } from 'uuid';
+import { COOKIE_NAME, FORGOT_PASSWORD_PREFIX } from '../constants';
+import { User } from '../entities/User';
+import { sendEmail } from '../utils/sendEmail';
+import { validateRegister } from '../utils/validateRegister';
+import { UsernamePasswordInput } from './UsernamePasswordInput';
 
 // Object types are what we return
 @ObjectType()

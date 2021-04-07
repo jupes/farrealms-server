@@ -1,6 +1,16 @@
-import { Post } from '../entities/Post';
-import { Arg, Ctx, Field, InputType, Int, Mutation, Query, Resolver, UseMiddleware } from 'type-graphql';
 import { MyContext } from 'src/types';
+import {
+  Arg,
+  Ctx,
+  Field,
+  InputType,
+  Int,
+  Mutation,
+  Query,
+  Resolver,
+  UseMiddleware,
+} from 'type-graphql';
+import { Post } from '../entities/Post';
 import { isAuth } from '../middleware/isAuth';
 
 @InputType()
@@ -29,10 +39,10 @@ export class PostResolver {
   async createPost(
     @Arg('options') options: PostInput,
     @Ctx() { redis, req }: MyContext
-    ): Promise<Post> {
-    return Post.create({ 
+  ): Promise<Post> {
+    return Post.create({
       ...options,
-      authorId: req.session.userId
+      authorId: req.session.userId,
     }).save();
   }
 
