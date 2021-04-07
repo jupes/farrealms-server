@@ -15,11 +15,11 @@ import {
   Resolver,
 } from 'type-graphql';
 import argon2 from 'argon2';
-import { EntityManager } from '@mikro-orm/postgresql';
 import { UsernamePasswordInput } from './UsernamePasswordInput';
 import { validateRegister } from '../utils/validateRegister';
 import { sendEmail } from '../utils/sendEmail';
 import { v4 } from 'uuid';
+import { getConnection } from 'typeorm';
 
 // Object types are what we return
 @ObjectType()
@@ -41,27 +41,26 @@ class FieldError {
 @Resolver()
 export class UserResolver {
   @Query(() => User, { nullable: true })
-  async currentUser(@Ctx() { req, em }: MyContext) {
+  currentUser(@Ctx() { req }: MyContext) {
     // user is not logged in
     if (!req.session.userId) {
       return null;
     }
 
-    const user = await em.findOne(User, { _id: req.session.userId });
-    return user;
+    return User.findOne(req.session.userId);
   }
 
   // get all the users currently registered
   @Query(() => [User])
-  async users(@Ctx() { em }: MyContext): Promise<User[]> {
-    return await em.find(User, {});
+  users(): Promise<User[]> {
+    return User.find();
   }
 
   @Mutation(() => UserResponse)
   async resetPassword(
     @Arg('token') token: string,
     @Arg('newPassword') newPassword: string,
-    @Ctx() { em, redis, req }: MyContext
+    @Ctx() { redis, req }: MyContext
   ): Promise<UserResponse> {
     // Verify the new password is good
     // TODO: enforce password requirements here, prolly handled by a util later instead of here
@@ -75,7 +74,7 @@ export class UserResolver {
         ],
       };
     }
-const key = FORGOT_PASSWORD_PREFIX + token;
+    const key = FORGOT_PASSWORD_PREFIX + token;
     const userId = await redis.get(key);
     if (!userId) {
       return {
@@ -88,7 +87,8 @@ const key = FORGOT_PASSWORD_PREFIX + token;
       };
     }
 
-    const user = await em.findOne(User, { _id: parseInt(userId) });
+    const userIdAsNum = parseInt(userId);
+    const user = await User.findOne(userIdAsNum);
     if (!user) {
       return {
         errors: [
@@ -100,10 +100,12 @@ const key = FORGOT_PASSWORD_PREFIX + token;
       };
     }
 
-    user.password = await argon2.hash(newPassword);
-    await em.persistAndFlush(user);
+    await User.update(
+      { _id: userIdAsNum },
+      { password: await argon2.hash(newPassword) }
+    );
 
-    await redis.del(key)
+    await redis.del(key);
 
     // Log in user automatically after successful password reset
     req.session.userId = user._id;
@@ -114,9 +116,10 @@ const key = FORGOT_PASSWORD_PREFIX + token;
   @Mutation(() => Boolean)
   async forgotPassword(
     @Arg('email') email: string,
-    @Ctx() { em, redis }: MyContext
+    @Ctx() { redis }: MyContext
   ) {
-    const user = await em.findOne(User, { email });
+    // if searching by a column that is not a primary key you must use the { where: {item} } syntax
+    const user = await User.findOne({ where: { email } });
     if (!user) {
       // the user is not in the DB, but we dont necessarily want the user to know that so return true and do nothing
       return true;
@@ -142,7 +145,7 @@ const key = FORGOT_PASSWORD_PREFIX + token;
   @Mutation(() => UserResponse)
   async register(
     @Arg('options', () => UsernamePasswordInput) options: UsernamePasswordInput,
-    @Ctx() { em, req }: MyContext
+    @Ctx() { req }: MyContext
   ): Promise<UserResponse> {
     const errors = validateRegister(options);
     if (errors) {
@@ -152,18 +155,24 @@ const key = FORGOT_PASSWORD_PREFIX + token;
     const hashedPassword = await argon2.hash(options.password);
     let user;
     try {
-      const result = await (em as EntityManager)
-        .createQueryBuilder(User)
-        .getKnexQuery()
-        .insert({
+      // The below User.create is the same as the query builder
+      // User.create({
+      // email: options.email,
+      //     username: options.username,
+      //     password: hashedPassword,
+      // }).save()
+      const result = await getConnection()
+        .createQueryBuilder()
+        .insert()
+        .into(User)
+        .values({
           email: options.email,
           username: options.username,
           password: hashedPassword,
-          created_at: new Date(),
-          updated_at: new Date(),
         })
-        .returning('*');
-      user = result[0];
+        .returning('*')
+        .execute();
+      user = result.raw[0];
     } catch (err) {
       //err.code === '23505'
       //err.detail.includes('already exists')
@@ -191,13 +200,12 @@ const key = FORGOT_PASSWORD_PREFIX + token;
   async login(
     @Arg('usernameOrEmail') usernameOrEmail: string,
     @Arg('password') password: string,
-    @Ctx() { em, req }: MyContext
+    @Ctx() { req }: MyContext
   ): Promise<UserResponse> {
-    const user = await em.findOne(
-      User,
+    const user = await User.findOne(
       usernameOrEmail.includes('@')
-        ? { email: usernameOrEmail }
-        : { username: usernameOrEmail }
+        ? { where: { email: usernameOrEmail } }
+        : { where: { username: usernameOrEmail } }
     );
     if (!user) {
       return {

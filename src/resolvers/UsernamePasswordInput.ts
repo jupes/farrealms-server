@@ -1,7 +1,4 @@
-import {
-  Field,
-  InputType
-} from 'type-graphql';
+import { Field, InputType } from 'type-graphql';
 
 // Input types are used for arguments
 
