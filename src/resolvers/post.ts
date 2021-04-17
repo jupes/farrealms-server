@@ -1,4 +1,3 @@
-import { User } from 'src/entities/User';
 import { MyContext } from 'src/types';
 import {
   Arg,
@@ -65,7 +64,7 @@ export class PostResolver {
   @UseMiddleware(isAuth)
   async createPost(
     @Arg('options') options: PostInput,
-    @Ctx() { redis, req }: MyContext
+    @Ctx() { req }: MyContext
   ): Promise<Post> {
     return Post.create({
       ...options,

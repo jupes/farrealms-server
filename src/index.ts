@@ -31,10 +31,8 @@ const main = async () => {
 
   await connection.runMigrations();
 
-  // const orm = await MikroORM.init(mikroConfig);
-  // FOR TEST PURPOSES: Delete all users
-  // await orm.em.nativeDelete(User, {})
-  // await orm.getMigrator().up();
+  // Delete all posts in the DB
+  // await Post.delete({})
 
   const app = express();
 
