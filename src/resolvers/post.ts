@@ -7,6 +7,7 @@ import {
   InputType,
   Int,
   Mutation,
+  ObjectType,
   Query,
   Resolver,
   Root,
@@ -24,6 +25,15 @@ export class PostInput {
   text: string;
 }
 
+@ObjectType()
+class CursorPagination {
+  // Two ways of declaring an array of type Post below
+  @Field(() => [Post]) // GraphQL Post Type
+  posts: Post[]; // Typescript Post Type
+  @Field()
+  hasMorePosts: boolean;
+}
+
 @Resolver(Post)
 export class PostResolver {
   @FieldResolver(() => String)
@@ -31,19 +41,20 @@ export class PostResolver {
     return root.text.slice(0, 50);
   }
 
-  @Query(() => [Post])
-  posts(
+  @Query(() => CursorPagination)
+  async posts(
     // CURSOR BASED PAGINATION
     @Arg('limit', () => Int) limit: number,
     @Arg('cursor', () => String, { nullable: true }) cursor: string | null
-  ): Promise<Post[]> {
+  ): Promise<CursorPagination> {
     //return Post.find();
-    let realLimit = Math.min(50, limit);
+    const realLimit = Math.min(50, limit);
+    const realLimitPlusOne = realLimit + 1;
     let queryBuilder = getConnection()
       .getRepository(Post)
       .createQueryBuilder('p')
       .orderBy('"createdAt"', 'DESC')
-      .take(realLimit);
+      .take(realLimitPlusOne);
 
     if (cursor) {
       queryBuilder.where('"createdAt" < :cursor', {
@@ -51,7 +62,12 @@ export class PostResolver {
       });
     }
 
-    return queryBuilder.getMany();
+    const posts = await queryBuilder.getMany();
+
+    return {
+      posts: posts.slice(0, realLimit),
+      hasMorePosts: posts.length === realLimitPlusOne,
+    };
   }
 
   @Query(() => Post, { nullable: true })
