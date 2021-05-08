@@ -4,10 +4,12 @@ import {
   Arg,
   Ctx,
   Field,
+  FieldResolver,
   Mutation,
   ObjectType,
   Query,
   Resolver,
+  Root,
 } from 'type-graphql';
 import { getConnection } from 'typeorm';
 import { v4 } from 'uuid';
@@ -34,8 +36,18 @@ class FieldError {
   message: string;
 }
 
-@Resolver()
+@Resolver(User)
 export class UserResolver {
+  @FieldResolver(() => String)
+  email(@Root() user : User, @Ctx() {req}: MyContext ) {
+    // this is current user and they can see their own email
+    if(req.session.userId === user._id) {
+      return user.email;
+    }
+    // you are not this user and so should not see this user's email
+    return '';
+  }
+
   @Query(() => User, { nullable: true })
   currentUser(@Ctx() { req }: MyContext) {
     // user is not logged in

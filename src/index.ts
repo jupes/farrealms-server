@@ -10,6 +10,7 @@ import { createConnection } from 'typeorm';
 import { COOKIE_NAME, __prod__ } from './constants';
 import { Post } from './entities/Post';
 import { User } from './entities/User';
+import { Upvote } from "./entities/Upvote";
 import { HelloResolver } from './resolvers/hello';
 import { PostResolver } from './resolvers/post';
 import { UserResolver } from './resolvers/user';
@@ -26,7 +27,7 @@ const main = async () => {
     logging: true,
     synchronize: true,
     migrations: [path.join(__dirname, './migrations/*')],
-    entities: [Post, User],
+    entities: [Post, User, Upvote],
   });
 
   await connection.runMigrations();

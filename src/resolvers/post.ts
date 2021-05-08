@@ -41,6 +41,14 @@ export class PostResolver {
     return root.text.slice(0, 50);
   }
 
+  @Mutation(() => Boolean)
+  vote(
+    @Arg('postId', () => Int) postId: number,
+    @Ctx() {req}: MyContext
+  ) {
+    return true;
+  }
+
   @Query(() => CursorPagination)
   async posts(
     // CURSOR BASED PAGINATION
@@ -50,19 +58,23 @@ export class PostResolver {
     //return Post.find();
     const realLimit = Math.min(50, limit);
     const realLimitPlusOne = realLimit + 1;
-    let queryBuilder = getConnection()
-      .getRepository(Post)
-      .createQueryBuilder('p')
-      .orderBy('"createdAt"', 'DESC')
-      .take(realLimitPlusOne);
+
+    const replacements: any[] = [realLimitPlusOne];
 
     if (cursor) {
-      queryBuilder.where('"createdAt" < :cursor', {
-        cursor: new Date(parseInt(cursor)),
-      });
+      replacements.push(new Date(parseInt(cursor)));
     }
 
-    const posts = await queryBuilder.getMany();
+    const posts = await getConnection().query(
+      `
+    select p.* 
+    from post p
+    ${cursor ? `where p."createdAt" < $2` : ''}
+    order by p."createdAt" DESC
+    limit $1
+    `,
+      replacements
+    );
 
     return {
       posts: posts.slice(0, realLimit),
