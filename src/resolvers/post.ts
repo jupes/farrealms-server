@@ -1,3 +1,4 @@
+import { Upvote } from 'src/entities/Upvote';
 import { MyContext } from 'src/types';
 import {
   Arg,
@@ -41,12 +42,36 @@ export class PostResolver {
     return root.text.slice(0, 50);
   }
 
+  // tech debt - this should have its own resolver
   @Mutation(() => Boolean)
-  vote(
+  @UseMiddleware(isAuth) // this middleware setup verifies a user is logged in
+  async vote(
     @Arg('postId', () => Int) postId: number,
-    @Ctx() {req}: MyContext
+    @Arg('value', () => Int) value: number,
+    @Ctx() { req }: MyContext
   ) {
-    return true;
+    // check if the value is weird or not -1, if so just do a normal upvote
+    const isUpvote = value !== -1;
+    const change = isUpvote ? 1 : -1;
+    // user id from the Upvote entity
+    const { userId } = req.session;
+    await Upvote.insert({
+      userId,
+      postId,
+      value: change,
+    });
+    await getConnection().query(`
+    update post
+    set score = score + $1
+    where p.id = $2
+    `, [change, postId])
+    await Post.update(
+      {
+        // underscore id prolly
+        _id: postId,
+      },
+      {}
+    );
   }
 
   @Query(() => CursorPagination)
