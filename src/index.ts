@@ -10,27 +10,30 @@ import { createConnection } from 'typeorm';
 import { COOKIE_NAME, __prod__ } from './constants';
 import { Post } from './entities/Post';
 import { User } from './entities/User';
+import { Upvote } from "./entities/Upvote";
 import { HelloResolver } from './resolvers/hello';
 import { PostResolver } from './resolvers/post';
 import { UserResolver } from './resolvers/user';
 import { MyContext } from './types';
 import { sleep } from './utils/sleep';
+import path from 'path'
 
 const main = async () => {
-  const connection = createConnection({
+  const connection = await createConnection({
     type: 'postgres',
     database: 'notReddit',
     username: 'postgres',
     password: 'postgres',
     logging: true,
     synchronize: true,
-    entities: [Post, User],
+    migrations: [path.join(__dirname, './migrations/*')],
+    entities: [Post, User, Upvote],
   });
 
-  // const orm = await MikroORM.init(mikroConfig);
-  // FOR TEST PURPOSES: Delete all users
-  // await orm.em.nativeDelete(User, {})
-  // await orm.getMigrator().up();
+  await connection.runMigrations();
+
+  // Delete all posts in the DB
+  // await Post.delete({})
 
   const app = express();
 

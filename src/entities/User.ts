@@ -3,13 +3,13 @@ import {
   Column,
   CreateDateColumn,
   Entity,
-  ManyToOne,
   OneToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
 import { Field, Int, ObjectType } from 'type-graphql';
 import { Post } from './Post';
+import { Upvote } from './Upvote';
 
 // You can stack decorators
 @ObjectType()
@@ -32,6 +32,9 @@ export class User extends BaseEntity {
 
   @OneToMany(() => Post, (post) => post.author)
   posts: Post[];
+
+  @OneToMany(() => Upvote, (upvote) => upvote.user)
+  upvotes: Upvote[];
 
   @Field(() => String)
   @CreateDateColumn()
